@@ -1,5 +1,5 @@
 <template>
-  <section
+  <div
     class="VueCarousel"
     v-bind:class="{ 'VueCarousel--reverse': paginationPosition === 'top' }"
   >
@@ -42,7 +42,7 @@
     <slot name="pagination" v-if="paginationEnabled">
       <pagination @paginationclick="goToPage($event, 'pagination')"/>
     </slot>
-  </section>
+  </div>
 </template>
 <script>
 import autoplay from "./mixins/autoplay";
@@ -50,7 +50,10 @@ import debounce from "./utils/debounce";
 import Navigation from "./Navigation.vue";
 import Pagination from "./Pagination.vue";
 import Slide from "./Slide.vue";
+import { setTimeout } from 'timers';
 
+let internalResize;
+let internalCounter = 0;
 const transitionStartNames = {
   onwebkittransitionstart: "webkitTransitionStart",
   onmoztransitionstart: "transitionstart",
@@ -92,6 +95,7 @@ export default {
     return {
       browserWidth: null,
       carouselWidth: 0,
+      totalCarouselWidth: 0,
       currentPage: 0,
       dragging: false,
       dragMomentum: 0,
@@ -102,9 +106,11 @@ export default {
       offset: 0,
       refreshRate: 16,
       slideCount: 0,
+      refreshHit: 0,
       transitionstart: "transitionstart",
       transitionend: "transitionend",
-      currentHeight: "auto"
+      currentHeight: "auto",
+      refHit: null
     };
   },
   mixins: [autoplay],
@@ -438,6 +444,7 @@ export default {
      * @return {Number}
      */
     maxOffset() {
+      return this.totalCarouselWidth - (this.slideWidth * this.currentPerPage);
       return Math.max(
         this.slideWidth * (this.slideCount - this.currentPerPage) -
           this.spacePadding * this.spacePaddingMaxOffsetFactor,
@@ -609,6 +616,19 @@ export default {
       }
       return this.carouselWidth;
     },
+
+    getTotalCarouselWidth() {
+      let carouselInnerElements = this.$el.getElementsByClassName(
+        "VueCarousel-inner"
+      );
+      this.totalCarouselWidth = 0;
+      for (let i = 0; i < carouselInnerElements[0].children.length; i++) {
+        if (carouselInnerElements[0].children[i].clientWidth > 0) {
+          this.totalCarouselWidth += carouselInnerElements[0].children[i].clientWidth || 0;
+        }
+      }
+      return this.totalCarouselWidth;
+    },
     /**
      * Get the maximum height of the carousel active slides
      * @return {String} The carousel height
@@ -662,9 +682,14 @@ export default {
     /**
      * Set the current page to a specific value
      * This function will only apply the change if the value is within the carousel bounds
+     * for carousel scrolling per page.
      * @param  {Number} page The value of the new page number
+     * @param  {string|undefined} advanceType An optional value describing the type of page advance
      */
     goToPage(page) {
+      if(page === 0) {
+        return this.offset = 0;
+      }
       if (page >= 0 && page <= this.pageCount) {
         this.offset = this.scrollPerPage
           ? Math.min(
@@ -689,6 +714,12 @@ export default {
     /* istanbul ignore next */
     onStart(e) {
       // alert("start");
+
+      // detect right click
+      if (e.button == 2) {
+        return;
+      }
+
       document.addEventListener(
         this.isTouch ? "touchend" : "mouseup",
         this.onEnd,
@@ -716,6 +747,7 @@ export default {
       if (this.autoplay && !this.autoplayHoverPause) {
         this.restartAutoplay();
       }
+      this.pauseAutoplay();
 
       // compute the momemtum speed
       const eventPosX = this.isTouch ? e.changedTouches[0].clientX : e.clientX;
@@ -828,6 +860,7 @@ export default {
       this.getSlideCount();
       this.getBrowserWidth();
       this.getCarouselWidth();
+      this.getTotalCarouselWidth();
       this.setCurrentPageInBounds();
     },
     /**
@@ -888,6 +921,12 @@ export default {
     if (this.autoplayDirection === "backward") {
       this.goToLastSlide();
     }
+    setTimeout(()=>{
+      this.onResize();
+      setTimeout(()=>{
+        this.onResize();
+      }, 10000);
+    },5000)
   },
   beforeDestroy() {
     this.detachMutationObserver();
