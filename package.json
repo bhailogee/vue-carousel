@@ -1,6 +1,6 @@
 {
   "name": "vue-carousel-variable-width",
-  "version": "0.18.3",
+  "version": "0.18.4",
   "description": "A flexible, responsive, touch-friendly carousel for Vue.js",
   "main": "dist/vue-carousel.min.js",
   "scripts": {
