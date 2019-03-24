@@ -444,7 +444,9 @@ export default {
      * @return {Number}
      */
     maxOffset() {
-      return this.totalCarouselWidth - this.slideWidth * this.currentPerPage;
+      return (
+        this.totalCarouselWidth - this.slideWidth * this.currentPerPage + 18
+      );
       return Math.max(
         this.slideWidth * (this.slideCount - this.currentPerPage) -
           this.spacePadding * this.spacePaddingMaxOffsetFactor,
