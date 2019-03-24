@@ -50,7 +50,7 @@ import debounce from "./utils/debounce";
 import Navigation from "./Navigation.vue";
 import Pagination from "./Pagination.vue";
 import Slide from "./Slide.vue";
-import { setTimeout } from 'timers';
+import { setTimeout } from "timers";
 
 let internalResize;
 let internalCounter = 0;
@@ -444,7 +444,7 @@ export default {
      * @return {Number}
      */
     maxOffset() {
-      return this.totalCarouselWidth - (this.slideWidth * this.currentPerPage);
+      return this.totalCarouselWidth - this.slideWidth * this.currentPerPage;
       return Math.max(
         this.slideWidth * (this.slideCount - this.currentPerPage) -
           this.spacePadding * this.spacePaddingMaxOffsetFactor,
@@ -502,6 +502,7 @@ export default {
      * @return {Number} The index of the next page
      * */
     getNextPage() {
+      return this.currentPage + 1;
       if (this.currentPage < this.pageCount - 1) {
         return this.currentPage + 1;
       }
@@ -624,7 +625,8 @@ export default {
       this.totalCarouselWidth = 0;
       for (let i = 0; i < carouselInnerElements[0].children.length; i++) {
         if (carouselInnerElements[0].children[i].clientWidth > 0) {
-          this.totalCarouselWidth += carouselInnerElements[0].children[i].clientWidth || 0;
+          this.totalCarouselWidth +=
+            carouselInnerElements[0].children[i].clientWidth || 0;
         }
       }
       return this.totalCarouselWidth;
@@ -687,10 +689,10 @@ export default {
      * @param  {string|undefined} advanceType An optional value describing the type of page advance
      */
     goToPage(page) {
-      if(page === 0) {
-        return this.offset = 0;
+      if (page === 0) {
+        return (this.offset = 0);
       }
-      if (page >= 0 && page <= this.pageCount) {
+      if (page >= 0) {
         this.offset = this.scrollPerPage
           ? Math.min(
               this.slideWidth * this.currentPerPage * page,
@@ -921,12 +923,12 @@ export default {
     if (this.autoplayDirection === "backward") {
       this.goToLastSlide();
     }
-    setTimeout(()=>{
+    setTimeout(() => {
       this.onResize();
-      setTimeout(()=>{
+      setTimeout(() => {
         this.onResize();
       }, 10000);
-    },5000)
+    }, 5000);
   },
   beforeDestroy() {
     this.detachMutationObserver();
