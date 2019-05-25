@@ -74,7 +74,30 @@ export default {
        * @type {string}
        */
       this.$emit("navigationclick", direction);
+    },
+
+    forcedReflow() {
+      var c = document.getElementsByClassName("VueCarousel-navigation");
+      for (let ii = 0; ii < c.length; ii++) {
+        //c[ii].setAttribute( 'style', 'z-index:1 !important');
+        c[ii].style.display = "none";
+        c[ii].offsetHeight; // no need to store this anywhere, the reference is enough
+        c[ii].style.display = "";
+      }
+      //console.log('reflow')
     }
+  },
+  mounted() {
+    var startTime = new Date().getTime();
+    var interval = setInterval(() => {
+      if (new Date().getTime() - startTime > 20000) {
+        clearInterval(interval);
+        return;
+      }
+      this.forcedReflow();
+
+      //$('<style></style>').appendTo($(document.body)).remove();
+    }, 1000);
   }
 };
 </script>

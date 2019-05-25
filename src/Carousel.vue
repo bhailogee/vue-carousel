@@ -96,6 +96,7 @@ export default {
       browserWidth: null,
       carouselWidth: 0,
       totalCarouselWidth: 0,
+      totalItems: 0,
       currentPage: 0,
       dragging: false,
       dragMomentum: 0,
@@ -177,7 +178,7 @@ export default {
      */
     touchDrag: {
       type: Boolean,
-      default: true
+      default: false
     },
     /**
      * Listen for an external navigation request using this prop.
@@ -313,7 +314,7 @@ export default {
      */
     speed: {
       type: Number,
-      default: 500
+      default: 1000
     },
     /**
      * Name (tag) of slide component
@@ -444,14 +445,15 @@ export default {
      * @return {Number}
      */
     maxOffset() {
-      return (
-        this.totalCarouselWidth - this.slideWidth * this.currentPerPage + 18
-      );
-      return Math.max(
-        this.slideWidth * (this.slideCount - this.currentPerPage) -
-          this.spacePadding * this.spacePaddingMaxOffsetFactor,
-        0
-      );
+      return this.totalCarouselWidth - this.carouselWidth + this.totalItems * 2;
+      // return (
+      //   this.totalCarouselWidth - (this.slideWidth * this.currentPerPage)
+      // );
+      // return Math.max(
+      //   this.slideWidth * (this.slideCount - this.currentPerPage) -
+      //     this.spacePadding * this.spacePaddingMaxOffsetFactor,
+      //   0
+      // );
     },
     /**
      * Calculate the number of pages of slides
@@ -467,9 +469,10 @@ export default {
      * @return {Number} Slide width
      */
     slideWidth() {
+      //debugger;
       const width = this.carouselWidth - this.spacePadding * 2;
       const perPage = this.currentPerPage;
-
+      //console.log(`slideWidth ${width / perPage}`)
       return width / perPage;
     },
     /**
@@ -525,12 +528,12 @@ export default {
      */
     advancePage(direction) {
       if (direction && direction === "backward" && this.canAdvanceBackward) {
-        this.goToPage(this.getPreviousPage(), "navigation");
+        this.goToPage(this.getPreviousPage(), "navigation", -1);
       } else if (
         (!direction || (direction && direction !== "backward")) &&
         this.canAdvanceForward
       ) {
-        this.goToPage(this.getNextPage(), "navigation");
+        this.goToPage(this.getNextPage(), "navigation", 1);
       }
     },
     goToLastSlide() {
@@ -617,6 +620,7 @@ export default {
           this.carouselWidth = carouselInnerElements[i].clientWidth || 0;
         }
       }
+      //console.log("carouselWidth " + this.carouselWidth);
       return this.carouselWidth;
     },
 
@@ -625,12 +629,16 @@ export default {
         "VueCarousel-inner"
       );
       this.totalCarouselWidth = 0;
+      this.totalItems = carouselInnerElements[0].children.length;
       for (let i = 0; i < carouselInnerElements[0].children.length; i++) {
         if (carouselInnerElements[0].children[i].clientWidth > 0) {
           this.totalCarouselWidth +=
             carouselInnerElements[0].children[i].clientWidth || 0;
         }
       }
+      //console.log(`carouselInnerElements ${carouselInnerElements[0].children.length}`);
+      //console.log(`totalCarouselWidth ${this.totalCarouselWidth}`)
+      //console.log("carousel width calculated")
       return this.totalCarouselWidth;
     },
     /**
@@ -691,16 +699,37 @@ export default {
      * @param  {string|undefined} advanceType An optional value describing the type of page advance
      */
     goToPage(page) {
+      //debugger;
       if (page === 0) {
         return (this.offset = 0);
       }
+      if (page > 1 && this.offset == 0) {
+        page = 1;
+      }
+      // console.log('goToPage');
+      // console.log(`page ${page}`);
+      // console.log(`maxOffset ${this.maxOffset}`);
+      //debugger;
+
       if (page >= 0) {
-        this.offset = this.scrollPerPage
+        // debugger;
+        var newOffset = this.scrollPerPage
           ? Math.min(
               this.slideWidth * this.currentPerPage * page,
               this.maxOffset
             )
-          : Math.min(this.slideWidth * page, this.maxOffset);
+          : Math.min((this.carouselWidth - 120) * page, this.maxOffset);
+        if (arguments.length == 3) {
+          this.offset = Math.min(
+            this.offset + (this.carouselWidth - 120) * arguments[2],
+            this.maxOffset
+          );
+        } else this.offset = newOffset;
+        // console.log(`scrollPerPage ${this.scrollPerPage}`);
+        // console.log(`slideWidth ${this.slideWidth}`);
+        // console.log(`currentPerPage ${this.currentPerPage}`);
+
+        // console.log(`offset ${this.offset}`);
 
         // restart autoplay if specified
         if (this.autoplay && !this.autoplayHoverPause) {
@@ -735,11 +764,15 @@ export default {
         this.onDrag,
         true
       );
+      //console.log('onStart dragging')
 
       this.startTime = e.timeStamp;
       this.dragging = true;
       this.dragStartX = this.isTouch ? e.touches[0].clientX : e.clientX;
       this.dragStartY = this.isTouch ? e.touches[0].clientY : e.clientY;
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
     },
     /**
      * Trigger actions when mouse is released
@@ -747,11 +780,15 @@ export default {
      */
 
     onEnd(e) {
+      //console.log('onEnd')
       // restart autoplay if specified
       if (this.autoplay && !this.autoplayHoverPause) {
         this.restartAutoplay();
       }
       this.pauseAutoplay();
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
 
       // compute the momemtum speed
       const eventPosX = this.isTouch ? e.changedTouches[0].clientX : e.clientX;
@@ -772,8 +809,10 @@ export default {
       this.offset += this.dragOffset;
       this.dragOffset = 0;
       this.dragging = false;
+      if (this.offset > this.maxOffset) this.offset = this.maxOffset;
+      if (this.offset < 0) this.offset = 0;
 
-      this.render();
+      //this.render();
 
       // clear events listeners
       document.removeEventListener(
@@ -786,6 +825,7 @@ export default {
         this.onDrag,
         true
       );
+      return false;
     },
     /**
      * Trigger actions when mouse is pressed and then moved (mouse drag)
@@ -925,12 +965,15 @@ export default {
     if (this.autoplayDirection === "backward") {
       this.goToLastSlide();
     }
-    setTimeout(() => {
-      this.onResize();
-      setTimeout(() => {
-        this.onResize();
-      }, 10000);
-    }, 5000);
+
+    var startTime = new Date().getTime();
+    var interval = setInterval(() => {
+      if (new Date().getTime() - startTime > 40000) {
+        clearInterval(interval);
+        return;
+      }
+      this.getTotalCarouselWidth();
+    }, 1000);
   },
   beforeDestroy() {
     this.detachMutationObserver();
